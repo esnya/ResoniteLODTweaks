@@ -1,0 +1,66 @@
+name: ci
+
+permissions:
+  contents: write
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Prepare fallback references
+        shell: bash
+        run: |
+          mkdir -p Resonite
+          curl -fsSL https://github.com/resonite-modding-group/ResoniteModLoader/releases/latest/download/ResoniteModLoader.dll -o Resonite/ResoniteModLoader.dll
+          curl -fsSL https://github.com/resonite-modding-group/ResoniteModLoader/releases/latest/download/0Harmony.dll -o Resonite/0Harmony.dll
+
+      - name: Restore
+        run: dotnet restore ./LODTweaks.slnx
+
+      - name: Format
+        run: dotnet format ./LODTweaks.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build ./LODTweaks.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test ./LODTweaks.slnx -c Release --no-build --logger "console;verbosity=normal"
+
+      - name: Pack artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          cp ./src/LODTweaks/bin/Release/LODTweaks.dll ./artifacts/
+
+      - name: Upload artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v7
+        with:
+          name: ResoniteLODTweaks
+          path: artifacts/LODTweaks.dll
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" ./artifacts/LODTweaks.dll --verify-tag --generate-notes
