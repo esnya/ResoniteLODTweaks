@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LODTweaks/LODTweaks.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LODTweaks.Tests/LODTweaks.Tests.csproj" />
+  </Folder>
+</Solution>
